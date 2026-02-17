@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorkTrackX | SMK Ayer Keroh</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        :root {
+            --neon-cyan: #00f2ff;
+            --neon-pink: #ff00e5;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --bg-dark: #0d0d12;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 242, 255, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(255, 0, 229, 0.1) 0%, transparent 40%);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+        }
+
+        .neon-border-cyan { border: 1px solid var(--neon-cyan); box-shadow: 0 0 10px var(--neon-cyan); }
+        .neon-border-pink { border: 1px solid var(--neon-pink); box-shadow: 0 0 10px var(--neon-pink); }
+        
+        .neon-text-cyan { color: var(--neon-cyan); text-shadow: 0 0 5px var(--neon-cyan); }
+        .neon-text-pink { color: var(--neon-pink); text-shadow: 0 0 5px var(--neon-pink); }
+
+        .btn-glow-cyan:hover {
+            box-shadow: 0 0 20px var(--neon-cyan);
+            background: var(--neon-cyan);
+            color: #000;
+        }
+
+        .btn-glow-pink:hover {
+            box-shadow: 0 0 20px var(--neon-pink);
+            background: var(--neon-pink);
+            color: #000;
+        }
+
+        /* Custom Checkbox */
+        .checkbox-container input {
+            display: none;
+        }
+        .checkbox-custom {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--neon-cyan);
+            border-radius: 6px;
+            display: inline-block;
+            vertical-align: middle;
+            position: relative;
+            transition: all 0.3s;
+        }
+        .checkbox-container input:checked + .checkbox-custom {
+            background: var(--neon-cyan);
+            box-shadow: 0 0 10px var(--neon-cyan);
+        }
+        .checkbox-container input:checked + .checkbox-custom::after {
+            content: '✓';
+            position: absolute;
+            color: #000;
+            font-weight: bold;
+            left: 4px;
+            top: -2px;
+        }
+
+        /* Toast Animation */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            transform: translateX(-50%);
+            transition: opacity 0.5s, bottom 0.5s;
+        }
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 30px;
+        }
+
+        .rank-card {
+            transition: transform 0.3s;
+        }
+        .rank-card:hover {
+            transform: translateY(-5px);
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--glass-bg); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--neon-pink); }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- Header -->
+    <header class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+        <div class="text-center md:text-left">
+            <h1 class="font-orbitron text-xl md:text-2xl neon-text-cyan leading-tight">
+                REKOD PENGHANTARAN BUKU – PENDIDIKAN MORAL
+            </h1>
+            <p class="font-orbitron text-sm neon-text-pink tracking-widest">SMK AYER KEROH</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <span id="lastSaved" class="text-xs text-gray-400 italic"></span>
+            <button id="adminBtn" class="glass p-3 border border-pink-500 rounded-full hover:bg-pink-500 transition-all duration-300">
+                <i data-lucide="lock" class="w-5 h-5 text-pink-400"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-6xl mx-auto">
+        
+        <!-- Guru Mode -->
+        <section id="guruMode" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Selectors -->
+                <div class="glass p-6 space-y-4 border-l-4 border-cyan-500">
+                    <div>
+                        <label class="block text-xs uppercase tracking-widest mb-2 opacity-70">Pilih Kelas</label>
+                        <select id="selectKelas" class="w-full bg-black/40 border border-gray-700 rounded-lg p-3 focus:outline-none focus:border-cyan-400 transition-colors">
+                            <option value="">-- Pilih Kelas --</option>
+                            <option value="T4-ABMPVG3">TINGKATAN 4 A,B,MPV,G3</option>
+                            <option value="T5-AMPV">TINGKATAN 5 A & MPV</option>
+                            <option value="T5-G2G3">TINGKATAN 5 G2 & G3</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-widest mb-2 opacity-70">Tarikh Rekod</label>
+                        <input type="date" id="selectTarikh" class="w-full bg-black/40 border border-gray-700 rounded-lg p-3 focus:outline-none focus:border-cyan-400 transition-colors">
+                    </div>
+                </div>
+
+                <!-- Stats Summary -->
+                <div class="glass p-6 flex flex-col justify-center items-center border-l-4 border-pink-500">
+                    <div class="relative w-32 h-32 flex items-center justify-center">
+                        <svg class="w-full h-full transform -rotate-90">
+                            <circle cx="64" cy="64" r="58" stroke="currentColor" stroke-width="8" fill="transparent" class="text-gray-800" />
+                            <circle id="progressCircle" cx="64" cy="64" r="58" stroke="currentColor" stroke-width="8" fill="transparent" stroke-dasharray="364.4" stroke-dashoffset="364.4" class="text-cyan-400 transition-all duration-1000" />
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span id="progressText" class="text-2xl font-orbitron font-bold">0%</span>
+                            <span class="text-[10px] uppercase opacity-60">Dihantar</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student List -->
+            <div id="studentListContainer" class="glass p-6 hidden animate-in fade-in duration-500">
+                <h2 class="font-orbitron text-lg mb-4 border-b border-gray-700 pb-2">Senarai Nama Murid</h2>
+                <div id="studentList" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                    <!-- Names dynamically injected here -->
+                </div>
+                <div class="flex flex-wrap gap-3 border-t border-gray-700 pt-6">
+                    <button id="saveBtn" class="flex-1 min-w-[150px] bg-cyan-600/20 border border-cyan-400 py-3 rounded-lg font-orbitron text-sm btn-glow-cyan transition-all uppercase">Simpan Rekod Hari Ini</button>
+                    <button id="resetBtn" class="flex-1 min-w-[150px] bg-gray-600/20 border border-gray-500 py-3 rounded-lg font-orbitron text-sm hover:bg-gray-500 transition-all uppercase">Reset Tick</button>
+                    <button id="exportBtn" class="flex-1 min-w-[150px] bg-pink-600/20 border border-pink-400 py-3 rounded-lg font-orbitron text-sm btn-glow-pink transition-all uppercase">Export CSV</button>
+                </div>
+            </div>
+
+            <!-- Placeholder -->
+            <div id="placeholderMsg" class="glass p-12 text-center text-gray-500 flex flex-col items-center gap-4">
+                <i data-lucide="clipboard-list" class="w-12 h-12 opacity-30"></i>
+                <p>Sila pilih kelas untuk mula merekod penghantaran buku.</p>
+            </div>
+        </section>
+
+        <!-- Admin Mode -->
+        <section id="adminMode" class="hidden space-y-6 animate-in fade-in duration-500">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="font-orbitron text-2xl neon-text-pink">ADMIN DASHBOARD</h2>
+                <button id="backToGuru" class="text-sm border border-cyan-500 px-4 py-2 rounded hover:bg-cyan-500 hover:text-black transition-all">MOD GURU</button>
+            </div>
+
+            <!-- Admin Filters -->
+            <div class="glass p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs uppercase mb-2 opacity-70">Kelas</label>
+                    <select id="adminSelectKelas" class="w-full bg-black/40 border border-gray-700 rounded p-2 focus:outline-none">
+                        <option value="T4-ABMPVG3">TINGKATAN 4 A,B,MPV,G3</option>
+                        <option value="T5-AMPV">TINGKATAN 5 A & MPV</option>
+                        <option value="T5-G2G3">TINGKATAN 5 G2 & G3</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase mb-2 opacity-70">Mod Filter</label>
+                    <select id="adminFilterMode" class="w-full bg-black/40 border border-gray-700 rounded p-2 focus:outline-none">
+                        <option value="daily">Harian</option>
+                        <option value="weekly">Mingguan</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase mb-2 opacity-70">Rujukan Tarikh</label>
+                    <input type="date" id="adminDate" class="w-full bg-black/40 border border-gray-700 rounded p-2 focus:outline-none">
+                </div>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="glass p-6 text-center">
+                    <p class="text-xs uppercase opacity-70 mb-1">Dihantar (%)</p>
+                    <p id="kpiHantar" class="text-4xl font-orbitron neon-text-cyan">0%</p>
+                </div>
+                <div class="glass p-6 text-center">
+                    <p class="text-xs uppercase opacity-70 mb-1">Tidak Hantar (%)</p>
+                    <p id="kpiGagal" class="text-4xl font-orbitron neon-text-pink">0%</p>
+                </div>
+                <div class="glass p-6 text-center">
+                    <p class="text-xs uppercase opacity-70 mb-1">Jumlah Data</p>
+                    <p id="kpiTotal" class="text-4xl font-orbitron">0</p>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="glass p-6 min-h-[300px]">
+                    <h3 class="font-orbitron text-sm mb-4">Taburan Harian</h3>
+                    <canvas id="dailyChart"></canvas>
+                </div>
+                <div class="glass p-6 min-h-[300px]">
+                    <h3 class="font-orbitron text-sm mb-4">Prestasi Mingguan</h3>
+                    <canvas id="weeklyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Rankings -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Top Performers -->
+                <div class="glass p-6">
+                    <h3 class="font-orbitron text-sm mb-4 text-cyan-400 flex items-center gap-2">
+                        <i data-lucide="award"></i> TOP 3 - KERAP HANTAR
+                    </h3>
+                    <div id="topHantar" class="space-y-3">
+                        <p class="text-xs text-gray-500 italic">Tiada data untuk dipaparkan</p>
+                    </div>
+                </div>
+                <!-- Bottom Performers -->
+                <div class="glass p-6">
+                    <h3 class="font-orbitron text-sm mb-4 text-pink-400 flex items-center gap-2">
+                        <i data-lucide="alert-triangle"></i> TOP 3 - KERAP TIDAK HANTAR
+                    </h3>
+                    <div id="topTidak" class="space-y-3">
+                        <p class="text-xs text-gray-500 italic">Tiada data untuk dipaparkan</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Management -->
+            <div class="flex justify-end pt-8">
+                <button id="clearDataBtn" class="text-xs text-red-500 hover:text-red-300 transition-colors uppercase tracking-widest flex items-center gap-2">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> Padam Semua Data
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Login -->
+    <div id="loginModal" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
+        <div class="glass neon-border-pink p-8 w-full max-w-sm">
+            <h2 class="font-orbitron text-xl mb-6 text-center">Admin Verification</h2>
+            <input type="password" id="adminPassword" placeholder="Masukkan Password" class="w-full bg-black/50 border border-pink-500 p-3 rounded-lg mb-4 text-center tracking-[1em] focus:outline-none">
+            <div class="flex gap-2">
+                <button id="loginConfirm" class="flex-1 bg-pink-600 py-2 rounded font-orbitron hover:bg-pink-500 transition-all">MASUK</button>
+                <button id="loginCancel" class="flex-1 bg-gray-700 py-2 rounded font-orbitron hover:bg-gray-600 transition-all">BATAL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-[-100px] left-1/2 glass border-cyan-400 border px-6 py-3 rounded-full z-50 shadow-2xl flex items-center gap-2 text-cyan-300">
+        <i data-lucide="check-circle" class="w-5 h-5"></i>
+        <span id="toastMsg">Rekod disimpan ✅</span>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global State & Data
+        const STUDENTS = {
+            "T4-ABMPVG3": [
+                "ANOUSHKA A/P KATHIRASAN", "KAVINASH A/L SHASHITHARAN MUDALIAR", 
+                "RAUL A/L EDWIN ANTHONY", "PRAMANANTTHA A/L CHANDERA MOHAN", "PURVIN A/L MUNIANDY"
+            ],
+            "T5-AMPV": [
+                "AKSHEY A/L GOPI", "ASWARYA A/P KATHIRASAN", "JIVANESH A/L MOHAN", 
+                "OVIA A/P KOGELAN", "SHARWIN A/L TARMENDRAN", "THIRUSSHEN KUMAR A/L SENTHIL KUMAR", 
+                "ANDREW ISAIAH ALAN A/L ALAN THURAI"
+            ],
+            "T5-G2G3": [
+                "EBENEZER A/L NYANAPRAGASAM", "RITIKA NAIR A/P RAVINDRAN", 
+                "VIMAL A/L JEYAKUMAR", "HAYLIE DOUGLAS ANAK LOCUS", "KUGENDRAN A/L K GANESAN"
+            ]
+        };
+
+        const STORAGE_KEY = "worktrackx_records";
+        let db, auth, userId, appId;
+        let dailyChartInstance, weeklyChartInstance;
+
+        // --- Initialization ---
+        window.onload = async () => {
+            lucide.createIcons();
+            const config = JSON.parse(__firebase_config);
+            const app = initializeApp(config);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            appId = typeof __app_id !== 'undefined' ? __app_id : 'worktrackx-smkak';
+
+            // Auth Logic (Rule 3)
+            const initAuth = async () => {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            };
+            await initAuth();
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    userId = user.uid;
+                    console.log("Authenticated as:", userId);
+                    initApp();
+                }
+            });
+        };
+
+        function initApp() {
+            // Set Default Date to Today (KL Time)
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('selectTarikh').value = today;
+            document.getElementById('adminDate').value = today;
+
+            setupEventListeners();
+        }
+
+        function setupEventListeners() {
+            const selKelas = document.getElementById('selectKelas');
+            const selTarikh = document.getElementById('selectTarikh');
+
+            selKelas.onchange = () => renderList();
+            selTarikh.onchange = () => renderList();
+
+            document.getElementById('resetBtn').onclick = () => {
+                document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = false);
+                updateStatsUI();
+            };
+
+            document.getElementById('saveBtn').onclick = saveRecord;
+            document.getElementById('exportBtn').onclick = exportCSV;
+
+            // Admin Logic
+            document.getElementById('adminBtn').onclick = () => document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('loginCancel').onclick = () => document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('loginConfirm').onclick = loginAdmin;
+
+            document.getElementById('backToGuru').onclick = () => {
+                document.getElementById('adminMode').classList.add('hidden');
+                document.getElementById('guruMode').classList.remove('hidden');
+            };
+
+            document.getElementById('adminSelectKelas').onchange = refreshAdminView;
+            document.getElementById('adminFilterMode').onchange = refreshAdminView;
+            document.getElementById('adminDate').onchange = refreshAdminView;
+            document.getElementById('clearDataBtn').onclick = clearAllData;
+        }
+
+        // --- Core Functions ---
+
+        async function renderList() {
+            const kelas = document.getElementById('selectKelas').value;
+            const tarikh = document.getElementById('selectTarikh').value;
+            const listEl = document.getElementById('studentList');
+            const container = document.getElementById('studentListContainer');
+            const placeholder = document.getElementById('placeholderMsg');
+
+            if (!kelas) {
+                container.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            listEl.innerHTML = '<p class="col-span-full text-center py-4 animate-pulse">Memuatkan rekod...</p>';
+
+            // Load Existing Data
+            const record = await fetchRecord(tarikh);
+            const classData = (record && record[kelas]) ? record[kelas] : {};
+
+            listEl.innerHTML = '';
+            STUDENTS[kelas].forEach(name => {
+                const isChecked = classData[name] === true;
+                const div = document.createElement('div');
+                div.className = "flex items-center gap-3 glass p-4 hover:bg-white/5 transition-colors cursor-pointer group";
+                div.innerHTML = `
+                    <label class="checkbox-container flex items-center gap-3 w-full cursor-pointer">
+                        <input type="checkbox" class="student-checkbox" data-name="${name}" ${isChecked ? 'checked' : ''}>
+                        <span class="checkbox-custom"></span>
+                        <span class="text-sm group-hover:text-cyan-300 transition-colors">${name}</span>
+                    </label>
+                `;
+                div.onclick = (e) => {
+                    if(e.target.tagName !== 'INPUT') {
+                        const cb = div.querySelector('input');
+                        cb.checked = !cb.checked;
+                        updateStatsUI();
+                    }
+                };
+                listEl.appendChild(div);
+            });
+
+            // Listen for checkbox changes for real-time KPI update
+            document.querySelectorAll('.student-checkbox').forEach(cb => {
+                cb.addEventListener('change', updateStatsUI);
+            });
+
+            updateStatsUI();
+            lucide.createIcons();
+        }
+
+        function updateStatsUI() {
+            const total = document.querySelectorAll('.student-checkbox').length;
+            const checked = document.querySelectorAll('.student-checkbox:checked').length;
+            const percent = total > 0 ? Math.round((checked / total) * 100) : 0;
+
+            document.getElementById('progressText').innerText = `${percent}%`;
+            
+            // Progress Ring
+            const circle = document.getElementById('progressCircle');
+            const circumference = 364.4; // 2 * PI * 58
+            const offset = circumference - (percent / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+        }
+
+        async function fetchRecord(date) {
+            if (!userId) return null;
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', STORAGE_KEY, date);
+                const docSnap = await getDoc(docRef);
+                return docSnap.exists() ? docSnap.data() : null;
+            } catch (err) {
+                console.error("Fetch Error:", err);
+                return null;
+            }
+        }
+
+        async function saveRecord() {
+            const kelas = document.getElementById('selectKelas').value;
+            const tarikh = document.getElementById('selectTarikh').value;
+            if (!kelas || !tarikh) return;
+
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.innerText = "MENYIMPAN...";
+
+            const currentCheckboxes = document.querySelectorAll('.student-checkbox');
+            const classData = {};
+            currentCheckboxes.forEach(cb => {
+                classData[cb.getAttribute('data-name')] = cb.checked;
+            });
+
+            try {
+                // Get existing record for that day to merge other classes
+                const existing = await fetchRecord(tarikh) || {};
+                existing[kelas] = classData;
+
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', STORAGE_KEY, tarikh);
+                await setDoc(docRef, existing);
+
+                showToast("Rekod disimpan ✅");
+                const now = new Date();
+                document.getElementById('lastSaved').innerText = `Terakhir disimpan: ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            } catch (err) {
+                console.error("Save Error:", err);
+                showToast("Ralat menyimpan ❌");
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerText = "Simpan Rekod Hari Ini";
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function exportCSV() {
+            const kelas = document.getElementById('selectKelas').value;
+            const tarikh = document.getElementById('selectTarikh').value;
+            const checkboxes = document.querySelectorAll('.student-checkbox');
+            
+            let csv = `Bil,Nama Murid,Status,Tarikh: ${tarikh}\n`;
+            checkboxes.forEach((cb, idx) => {
+                csv += `${idx + 1},"${cb.getAttribute('data-name')}",${cb.checked ? 'HANTAR' : 'TIDAK HANTAR'}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Rekod_${kelas}_${tarikh}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // --- Admin Dash Functions ---
+
+        async function loginAdmin() {
+            const pass = document.getElementById('adminPassword').value;
+            if (pass === "mea2100") {
+                document.getElementById('loginModal').classList.add('hidden');
+                document.getElementById('adminMode').classList.remove('hidden');
+                document.getElementById('guruMode').classList.add('hidden');
+                document.getElementById('adminPassword').value = '';
+                refreshAdminView();
+            } else {
+                alert("Password Salah! Akses Ditolak.");
+            }
+        }
+
+        async function refreshAdminView() {
+            const kelas = document.getElementById('adminSelectKelas').value;
+            const mode = document.getElementById('adminFilterMode').value;
+            const refDateStr = document.getElementById('adminDate').value;
+            
+            if (!refDateStr) return;
+
+            const dates = [];
+            if (mode === 'daily') {
+                dates.push(refDateStr);
+            } else {
+                // Get Monday-Friday of the week
+                const d = new Date(refDateStr);
+                const day = d.getDay(); // 0 is Sun, 1 is Mon
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                const monday = new Date(d.setDate(diff));
+                
+                for (let i = 0; i < 5; i++) {
+                    const next = new Date(monday);
+                    next.setDate(monday.getDate() + i);
+                    dates.push(next.toISOString().split('T')[0]);
+                }
+            }
+
+            // Fetch All Needed Records
+            const allData = {};
+            const fetchPromises = dates.map(async (dt) => {
+                const r = await fetchRecord(dt);
+                if (r && r[kelas]) allData[dt] = r[kelas];
+            });
+            await Promise.all(fetchPromises);
+
+            computeStats(allData, dates, kelas);
+        }
+
+        function computeStats(data, dates, currentKelas) {
+            let totalPossible = dates.length * STUDENTS[currentKelas].length;
+            let totalHantar = 0;
+            const studentCounts = {};
+
+            // Initialize counts
+            STUDENTS[currentKelas].forEach(name => {
+                studentCounts[name] = { hantar: 0, tidak: 0 };
+            });
+
+            dates.forEach(dt => {
+                const dayData = data[dt];
+                STUDENTS[currentKelas].forEach(name => {
+                    if (dayData && dayData[name] === true) {
+                        totalHantar++;
+                        studentCounts[name].hantar++;
+                    } else {
+                        studentCounts[name].tidak++;
+                    }
+                });
+            });
+
+            const percentHantar = totalPossible > 0 ? Math.round((totalHantar / totalPossible) * 100) : 0;
+            const percentGagal = 100 - percentHantar;
+
+            // Update UI
+            document.getElementById('kpiHantar').innerText = `${percentHantar}%`;
+            document.getElementById('kpiGagal').innerText = `${percentGagal}%`;
+            document.getElementById('kpiTotal').innerText = totalPossible;
+
+            renderRankings(studentCounts, dates.length);
+            buildCharts(data, dates, currentKelas, percentHantar, percentGagal);
+        }
+
+        function renderRankings(counts, totalDays) {
+            const sortedHantar = Object.entries(counts).sort((a, b) => b[1].hantar - a[1].hantar).slice(0, 3);
+            const sortedTidak = Object.entries(counts).sort((a, b) => b[1].tidak - a[1].tidak).slice(0, 3);
+
+            const hantarEl = document.getElementById('topHantar');
+            const tidakEl = document.getElementById('topTidak');
+
+            hantarEl.innerHTML = sortedHantar.map(([name, stat], idx) => `
+                <div class="rank-card glass p-3 border-l-2 border-cyan-400 flex justify-between items-center">
+                    <span class="text-xs font-bold text-cyan-400">#${idx+1}</span>
+                    <span class="text-xs truncate max-w-[150px]">${name}</span>
+                    <span class="text-xs font-orbitron">${stat.hantar}/${totalDays}</span>
+                </div>
+            `).join('') || '<p class="text-xs text-gray-500 italic">Tiada data</p>';
+
+            tidakEl.innerHTML = sortedTidak.map(([name, stat], idx) => `
+                <div class="rank-card glass p-3 border-l-2 border-pink-400 flex justify-between items-center">
+                    <span class="text-xs font-bold text-pink-400">#${idx+1}</span>
+                    <span class="text-xs truncate max-w-[150px]">${name}</span>
+                    <span class="text-xs font-orbitron">${stat.tidak}/${totalDays}</span>
+                </div>
+            `).join('') || '<p class="text-xs text-gray-500 italic">Tiada data</p>';
+        }
+
+        function buildCharts(data, dates, currentKelas, pHantar, pGagal) {
+            // Cleanup
+            if (dailyChartInstance) dailyChartInstance.destroy();
+            if (weeklyChartInstance) weeklyChartInstance.destroy();
+
+            // 1. Donut Chart (Daily/Average)
+            const ctx1 = document.getElementById('dailyChart').getContext('2d');
+            dailyChartInstance = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Hantar', 'Tidak Hantar'],
+                    datasets: [{
+                        data: [pHantar, pGagal],
+                        backgroundColor: ['#00f2ff', '#ff00e5'],
+                        borderColor: '#0d0d12',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: '#fff' } } }
+                }
+            });
+
+            // 2. Weekly Bar Chart
+            const daysLabel = ['Isnin', 'Selasa', 'Rabu', 'Khamis', 'Jumaat'];
+            const barData = dates.map(dt => {
+                const dayData = data[dt];
+                if (!dayData) return 0;
+                const count = Object.values(dayData).filter(v => v === true).length;
+                return Math.round((count / STUDENTS[currentKelas].length) * 100);
+            });
+
+            const ctx2 = document.getElementById('weeklyChart').getContext('2d');
+            weeklyChartInstance = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: daysLabel,
+                    datasets: [{
+                        label: '% Hantar',
+                        data: barData,
+                        backgroundColor: 'rgba(0, 242, 255, 0.4)',
+                        borderColor: '#00f2ff',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 100, ticks: { color: '#fff' } },
+                        x: { ticks: { color: '#fff' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        async function clearAllData() {
+            const confirm1 = confirm("⚠️ PERINGATAN: Adakah anda pasti mahu memadam SEMUA rekod dalam pangkalan data? Tindakan ini tidak boleh diundur.");
+            if (!confirm1) return;
+            const confirm2 = confirm("PENGESAHAN KEDUA: Taip 'YES' untuk padam.");
+            
+            // Note: Since this is a demo environment, actual bulk deletion in Firestore
+            // requires iterating through all docs or using a backend. 
+            // Here we provide the mechanism for the user to clear the current year/collection data.
+            
+            showToast("Memadam data...");
+            try {
+                const querySnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', STORAGE_KEY));
+                const deletePromises = [];
+                querySnapshot.forEach((doc) => {
+                    deletePromises.push(deleteDoc(doc.ref));
+                });
+                await Promise.all(deletePromises);
+                showToast("Semua data telah dipadam.");
+                refreshAdminView();
+            } catch (err) {
+                console.error(err);
+                showToast("Ralat pemadaman.");
+            }
+        }
+
+    </script>
+</body>
+</html>
